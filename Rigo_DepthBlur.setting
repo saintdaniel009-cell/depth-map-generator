@@ -1,0 +1,149 @@
+{
+	Tools = ordered() {
+		Rigo_DepthBlur = MacroOperator {
+			CtrlWZoom = false,
+			NameSet = true,
+			Inputs = ordered() {
+				Footage = InstanceInput { SourceOp = "FootageIn", Source = "Input", Name = "Footage", },
+				DepthMap = InstanceInput { SourceOp = "DepthIn", Source = "Input", Name = "Depth Map", },
+				ExtraMask = InstanceInput { SourceOp = "MergeExtra", Source = "EffectMask", Name = "Extra Blur Mask", },
+				FocusPoint = InstanceInput { SourceOp = "DepthMatte", Source = "NumberIn1", Name = "Focus Point", ControlGroup = 1, Default = 0.38, MinScale = 0, MaxScale = 1, },
+				FocusRange = InstanceInput { SourceOp = "DepthMatte", Source = "NumberIn2", Name = "Focus Range", Default = 0.25, MinScale = 0, MaxScale = 1, },
+				Falloff = InstanceInput { SourceOp = "DepthMatte", Source = "NumberIn3", Name = "Falloff", Default = 0.1, MinScale = 0, MaxScale = 1, },
+				BackgroundBlur = InstanceInput { SourceOp = "DepthMatte", Source = "NumberIn5", Name = "Background Blur", Default = 1, MinScale = 0, MaxScale = 1, },
+				ForegroundBlur = InstanceInput { SourceOp = "DepthMatte", Source = "NumberIn4", Name = "Foreground Blur", Default = 0, MinScale = 0, MaxScale = 1, },
+				InvertDepth = InstanceInput { SourceOp = "DepthMatte", Source = "NumberIn6", Name = "Invert Depth (0/1)", Default = 0, MinScale = 0, MaxScale = 1, },
+				BlurSize = InstanceInput { SourceOp = "BlurHard", Source = "XBlurSize", Name = "Blur Size", Default = 25, MinScale = 0, MaxScale = 100, },
+				EdgeSoftness = InstanceInput { SourceOp = "SoftenSoft", Source = "XBlurSize", Name = "Edge Softness", Default = 4, MinScale = 0, MaxScale = 30, },
+				ExtraMaskAmount = InstanceInput { SourceOp = "MergeExtra", Source = "Blend", Name = "Extra Mask Blur Amount", Default = 0, MinScale = 0, MaxScale = 1, },
+				ShowMatte = InstanceInput { SourceOp = "ViewMatte", Source = "Blend", Name = "Show Blur Matte", Default = 0, MinScale = 0, MaxScale = 1, },
+			},
+			Outputs = {
+				MainOutput1 = InstanceOutput { SourceOp = "ViewMatte", Source = "Output", },
+			},
+			ViewInfo = GroupInfo { Pos = { 0, 0 }, },
+			Tools = ordered() {
+				FootageIn = PipeRouter {
+					CtrlWZoom = false,
+					ViewInfo = PipeRouterInfo { Pos = { -440, 0 }, },
+				},
+				DepthIn = PipeRouter {
+					CtrlWZoom = false,
+					ViewInfo = PipeRouterInfo { Pos = { -440, 165 }, },
+				},
+				DepthMatte = Custom {
+					CtrlWZoom = false,
+					Inputs = {
+						NumberIn1 = Input { Value = 0.38, },
+						NumberIn2 = Input { Value = 0.25, },
+						NumberIn3 = Input { Value = 0.1, },
+						NumberIn4 = Input { Value = 0, },
+						NumberIn5 = Input { Value = 1, },
+						NumberIn6 = Input { Value = 0, },
+						RedExpression = Input { Value = "max(min(max(((n1-n2/2)-(n6+r1-2*n6*r1))/max(n3,0.001),0),1)*n5, min(max(((n6+r1-2*n6*r1)-(n1+n2/2))/max(n3,0.001),0),1)*n4)", },
+						GreenExpression = Input { Value = "max(min(max(((n1-n2/2)-(n6+r1-2*n6*r1))/max(n3,0.001),0),1)*n5, min(max(((n6+r1-2*n6*r1)-(n1+n2/2))/max(n3,0.001),0),1)*n4)", },
+						BlueExpression = Input { Value = "max(min(max(((n1-n2/2)-(n6+r1-2*n6*r1))/max(n3,0.001),0),1)*n5, min(max(((n6+r1-2*n6*r1)-(n1+n2/2))/max(n3,0.001),0),1)*n4)", },
+						AlphaExpression = Input { Value = "1", },
+						Image1 = Input { SourceOp = "DepthIn", Source = "Output", },
+					},
+					ViewInfo = OperatorInfo { Pos = { -275, 165 }, },
+				},
+				MatteSoft = Custom {
+					CtrlWZoom = false,
+					Inputs = {
+						RedExpression = Input { Value = "min(r1*2,1)", },
+						GreenExpression = Input { Value = "min(r1*2,1)", },
+						BlueExpression = Input { Value = "min(r1*2,1)", },
+						AlphaExpression = Input { Value = "min(r1*2,1)", },
+						Image1 = Input { SourceOp = "DepthMatte", Source = "Output", },
+					},
+					ViewInfo = OperatorInfo { Pos = { -110, 115 }, },
+				},
+				MatteHard = Custom {
+					CtrlWZoom = false,
+					Inputs = {
+						RedExpression = Input { Value = "max(r1*2-1,0)", },
+						GreenExpression = Input { Value = "max(r1*2-1,0)", },
+						BlueExpression = Input { Value = "max(r1*2-1,0)", },
+						AlphaExpression = Input { Value = "max(r1*2-1,0)", },
+						Image1 = Input { SourceOp = "DepthMatte", Source = "Output", },
+					},
+					ViewInfo = OperatorInfo { Pos = { -110, 215 }, },
+				},
+				SoftenSoft = Blur {
+					CtrlWZoom = false,
+					Inputs = {
+						XBlurSize = Input { Value = 4, },
+						Input = Input { SourceOp = "MatteSoft", Source = "Output", },
+					},
+					ViewInfo = OperatorInfo { Pos = { 55, 115 }, },
+				},
+				SoftenHard = Blur {
+					CtrlWZoom = false,
+					Inputs = {
+						XBlurSize = Input { Value = 4, Expression = "SoftenSoft.XBlurSize", },
+						Input = Input { SourceOp = "MatteHard", Source = "Output", },
+					},
+					ViewInfo = OperatorInfo { Pos = { 55, 215 }, },
+				},
+				BlurHard = Blur {
+					CtrlWZoom = false,
+					Inputs = {
+						XBlurSize = Input { Value = 25, },
+						Input = Input { SourceOp = "FootageIn", Source = "Output", },
+					},
+					ViewInfo = OperatorInfo { Pos = { -275, -82 }, },
+				},
+				BlurSoftImg = Blur {
+					CtrlWZoom = false,
+					Inputs = {
+						XBlurSize = Input { Value = 10, Expression = "BlurHard.XBlurSize*0.4", },
+						Input = Input { SourceOp = "FootageIn", Source = "Output", },
+					},
+					ViewInfo = OperatorInfo { Pos = { -275, -33 }, },
+				},
+				MergeSoft = Merge {
+					CtrlWZoom = false,
+					Inputs = {
+						Background = Input { SourceOp = "FootageIn", Source = "Output", },
+						Foreground = Input { SourceOp = "BlurSoftImg", Source = "Output", },
+						EffectMask = Input { SourceOp = "SoftenSoft", Source = "Output", },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { 220, 0 }, },
+				},
+				MergeHard = Merge {
+					CtrlWZoom = false,
+					Inputs = {
+						Background = Input { SourceOp = "MergeSoft", Source = "Output", },
+						Foreground = Input { SourceOp = "BlurHard", Source = "Output", },
+						EffectMask = Input { SourceOp = "SoftenHard", Source = "Output", },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { 330, 0 }, },
+				},
+				MergeExtra = Merge {
+					CtrlWZoom = false,
+					Inputs = {
+						Blend = Input { Value = 0, },
+						Background = Input { SourceOp = "MergeHard", Source = "Output", },
+						Foreground = Input { SourceOp = "BlurHard", Source = "Output", },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { 440, 0 }, },
+				},
+				ViewMatte = Merge {
+					CtrlWZoom = false,
+					Inputs = {
+						Blend = Input { Value = 0, },
+						Background = Input { SourceOp = "MergeExtra", Source = "Output", },
+						Foreground = Input { SourceOp = "DepthMatte", Source = "Output", },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { 550, 0 }, },
+				},
+			},
+		},
+	},
+	ActiveTool = "Rigo_DepthBlur"
+}
